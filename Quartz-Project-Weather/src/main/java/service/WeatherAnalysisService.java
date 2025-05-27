@@ -3,7 +3,6 @@ package service;
 import client.WeatherApiClient;
 import dto.WeatherData;
 import org.springframework.stereotype.Service;
-
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -41,25 +40,37 @@ public class WeatherAnalysisService {
             .average()
             .orElse(Double.NaN);
 
-        List<LocalDate> lowest3Dates = dailyAvg.entrySet().stream()
-            .sorted(Map.Entry.comparingByValue())
+        // 🔽 根據最低溫度找出最低三天
+        List<LocalDate> lowest3Dates = data.stream()
+            .sorted(Comparator.comparingDouble(WeatherData::minTemp))
             .limit(3)
-            .map(Map.Entry::getKey)
+            .map(WeatherData::date)
             .sorted()
             .collect(Collectors.toList());
+
         double avgLow = lowest3Dates.stream()
-            .mapToDouble(dailyAvg::get)
+            .mapToDouble(date -> data.stream()
+                .filter(d -> d.date().equals(date))
+                .findFirst()
+                .map(WeatherData::minTemp)
+                .orElse(Double.NaN))
             .average()
             .orElse(Double.NaN);
 
-        List<LocalDate> highest3Dates = dailyAvg.entrySet().stream()
-            .sorted(Map.Entry.<LocalDate, Double>comparingByValue().reversed())
+        // 根據最高溫度找出最高三天
+        List<LocalDate> highest3Dates = data.stream()
+            .sorted(Comparator.comparingDouble(WeatherData::maxTemp).reversed())
             .limit(3)
-            .map(Map.Entry::getKey)
+            .map(WeatherData::date)
             .sorted()
             .collect(Collectors.toList());
+
         double avgHigh = highest3Dates.stream()
-            .mapToDouble(dailyAvg::get)
+            .mapToDouble(date -> data.stream()
+                .filter(d -> d.date().equals(date))
+                .findFirst()
+                .map(WeatherData::maxTemp)
+                .orElse(Double.NaN))
             .average()
             .orElse(Double.NaN);
 
@@ -76,22 +87,22 @@ public class WeatherAnalysisService {
 
         // ---- 發送報表到 Teams ----
         StringBuilder msg = new StringBuilder();
-        msg.append("📋 **每日天氣報告（").append(ym.getMonthValue()).append("月）**\n\n");
-        msg.append("📅 日期 | ☀️/🌧️ | 熱/冷 | 🌡️ 高溫 | 🌡️ 低溫 | 📈 平均\n");
+        msg.append("每日天氣報告（").append(ym.getMonthValue()).append("月）\n\n");
+        msg.append("日期 | 晴/雨 | 熱/冷 | 高溫 | 低溫 | 平均\n");
         msg.append("--- | --- | --- | --- | --- | ---\n");
 
         data.forEach(d -> {
             String date = d.date().format(DATE_FMT);
-            String rain = d.precipitation() > 0 ? "🌧️" : "☀️";
+            String rain = d.precipitation() > 0 ? "雨" : "晴";
             double todayAvg = dailyAvg.get(d.date());
-            String highLow = todayAvg >= avgOfDailyAvg ? "🔥" : "❄️";
+            String highLow = todayAvg >= avgOfDailyAvg ? "熱" : "冷";
             msg.append(String.format(
                 "%s | %s | %s | %.1f℃ | %.1f℃ | %.1f℃\n",
                 date, rain, highLow, d.maxTemp(), d.minTemp(), todayAvg
             ));
         });
 
-        msg.append("\n📊 **統計結果**\n");
+        msg.append("\n**統計結果**\n");
 
         msg.append("\n\t最低 3 天：\n").append(
             lowest3Dates.stream()
