@@ -1,6 +1,6 @@
 # WeatherSystem-monolithic
 
-基於 Spring Boot 與 Quartz 的天氣排程系統，透過 Open-Meteo API 定期抓取台北市、新北市與桃園市的天氣資訊，並以報表方式推送至 Microsoft Teams。
+    基於 Spring Boot 與 Quartz 的天氣排程系統，透過 Open-Meteo API 定期抓取台北市、新北市與桃園市的天氣資訊，並以報表方式推送至 Microsoft Teams。
 
 # 專案特色
 
